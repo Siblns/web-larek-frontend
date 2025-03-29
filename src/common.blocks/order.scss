@@ -8,11 +8,17 @@
 
   &__field {
     @include mixins.flex(column);
-    gap: 1.5rem;
-  }
+    gap: 1.5rem;   
+  } 
 
   &__buttons {
     @include mixins.flex(row);
     gap: 1.5rem;
+    
+    &_active {
+      &:disabled {
+        opacity: 1;
+      }
+    }
   }
 }
