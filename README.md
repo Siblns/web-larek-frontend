@@ -1,5 +1,5 @@
 # Размещение в сети
-https://github.com/yandex-praktikum/web-larek-frontend
+https://github.com/Siblns/web-larek-frontend
 
 # Проектная работа "Веб-ларек"
 
