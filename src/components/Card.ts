@@ -104,8 +104,7 @@ export class CatalogItem extends Card<CatalogItemB> {
                 container.addEventListener('click', actions.onClick);
             }
         }
-    }   
-       
+    }       
 }
 
 

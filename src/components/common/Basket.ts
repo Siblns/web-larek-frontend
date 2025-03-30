@@ -32,7 +32,7 @@ export class Basket extends Component<IBasketView> {
 
         if (this._buttonOrder) {
             this._buttonOrder.addEventListener('click', () => {
-                events.emit('order:open222');
+                events.emit('order:open');
             });
         }
 
