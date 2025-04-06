@@ -7,35 +7,42 @@ export interface IProduct {
   image: string;
   price: number;
 }
-
+//состояние приложения
 export interface IAppState {
   catalog: IProduct[];
   basket: string[];
-  preview: string | null;
-  contact: IContact | null;
-  order: IOrder | null;
-  loading: boolean;
+  order: IOrderFull | null;
 }
-
-//контакты
+//заполнение контактных данных для заказа
 export interface IContact {
   email: string;
   phone: string;
 }
-
+//заполнение уточняющих данных для заказа
 export interface IOrderForm {
   address: string;
   payment: string;
 }
-
-export interface IOrder extends IOrderForm {
+// состав корзины
+export interface IOrderFull extends IContact, IOrderForm {
+  total: number;
   items: string[]
 }
+//тип заполнение данных для заказа
+export type TOrderInput = Pick<
+	IOrderFull,
+	'payment' | 'address' | 'email' | 'phone'
+>;
+//тип состав корзины
+export type TContactBasket = Pick<
+	IOrderFull,
+	'items' | 'total'
+>;
 
 //результат
 export interface IOrderResult {
   id: string;
+  total: number;
 }
 
-export type FormErrorContacts = Partial<Record<keyof IContact, string>>;
-export type FormErrors = Partial<Record<keyof IOrder, string>>;
+export type FormErrors = Partial<Record<keyof IOrderFull, string>>;

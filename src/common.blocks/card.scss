@@ -81,9 +81,6 @@
 
   }
   &__price {
-    &::after {
-      content: ' синапсов';
       font-size: 1.4rem;
-    }
   }
 }

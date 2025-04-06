@@ -1,66 +1,82 @@
 import {Component} from "./base/Component";
-import {IProduct} from "../types";
-import {bem, createElement, ensureElement, formatNumber} from "../utils/utils";
-import clsx from "clsx";
+import {ensureElement} from "../utils/utils";
 
 interface ICardActions {
     onClick: (event: MouseEvent) => void;
 }
 
-export interface ICard<T> {
+export interface ICard {
+    id: string;
     title: string;
-    description?: string | string[];
+    description: string | string[];
     image: string;
-    price?: number;
-    category?: string;
-    status: T;
+    price: number;
+    category: string;
+	button: string;
 }
+export abstract class сardCompact extends Component<ICard> {
+	protected _title: HTMLElement;
+	protected _price: HTMLElement;
+	protected _button: HTMLButtonElement;
 
-export class Card<T> extends Component<ICard<T>> {
-    protected _title: HTMLElement;
-    protected _image?: HTMLImageElement;
-    protected _price?: HTMLImageElement;
-    protected _description?: HTMLElement;
-    protected _category?: HTMLElement;
-    protected _button?: HTMLButtonElement;
+	constructor(container: HTMLElement) {
+		super(container);
+        this._title = ensureElement<HTMLElement>(`.card__title`, container);
+        this._price = ensureElement<HTMLElement>(`.card__price`, container);
+        this._button = container.querySelector(`.card__button`);
+	}
 
-    constructor(protected blockName: string, container: HTMLElement, actions?: ICardActions) {
-        super(container);
-
-        this._title = ensureElement<HTMLElement>(`.${blockName}__title`, container);
-        this._image = ensureElement<HTMLImageElement>(`.${blockName}__image`, container);
-        this._button = container.querySelector(`.${blockName}__button`);
-        this._description = container.querySelector(`.${blockName}__text`);
-        this._category = container.querySelector(`.${blockName}__category`);
-        this._price = container.querySelector(`.${blockName}__price`);
-
-        if (actions?.onClick) {
-            if (this._button) {
-                this._button.addEventListener('click', actions.onClick);
-            } else {
-                container.addEventListener('click', actions.onClick);
-            }
-        }
+	set title(value: string) {
+        this.setText(this._title, value);
     }
 
+	get title() {
+		return this._title.textContent || '';
+	}
+
+    get price(): string {
+        return this._price.textContent || '';
+    }
+
+    set price(value: string) {
+        if(!value){
+            this.setText(this._price, 'Бесценно')
+            if (this._button) {
+                this._button.disabled = true;
+            }
+        }
+        else {
+            this.setDisabled(this._button, false);
+        }            
+    }
+}
+
+export class Card extends сardCompact {
+	protected _category: HTMLElement;
+	protected _image: HTMLImageElement;
+	protected _description?: HTMLElement;
+
+	constructor(container: HTMLElement, actions?: ICardActions) {
+		super(container);
+
+        this._image = ensureElement<HTMLImageElement>(`.card__image`, container);
+        this._description = container.querySelector(`.card__text`);
+        this._category = container.querySelector(`.card__category`);
+
+		if (actions?.onClick) {
+			if (this._button) {
+				this._button.addEventListener('click', actions.onClick);
+			} else {
+				container.addEventListener('click', actions.onClick);
+			}
+		}
+	}
     set id(value: string) {
         this.container.dataset.id = value;
     }
 
     get id(): string {
         return this.container.dataset.id || '';
-    }
-
-    set title(value: string) {
-        this.setText(this._title, value);
-    }
-
-    set price(value: string) {
-        this.setText(this._price, value);
-    }
-
-    get price(): string {
-        return this._price.textContent || '';
     }
 
     set category(value: string) {
@@ -86,26 +102,31 @@ export class Card<T> extends Component<ICard<T>> {
             this.setText(this._description, value);
         }
     }
+    
+    set buttonText(value: string) {
+		this._button.textContent = value;
+	}
 }
 
-export type CatalogItemB = {
-    _button: HTMLElement
-};
+export class cardBasket extends сardCompact {
+	protected _index: HTMLElement;
+	protected _deleteButton: HTMLElement;
 
-export class CatalogItem extends Card<CatalogItemB> {
-
-    constructor(protected blockName: string, container: HTMLElement, actions?: ICardActions) {
-        super('card', container, actions);
-        this._button = container.querySelector(`.${blockName}__button`);
+	constructor(container: HTMLElement, actions?: ICardActions) {
+		super(container);
+        this._index = ensureElement<HTMLElement>(`.basket__item-index`, container);		
+		this._deleteButton = ensureElement<HTMLButtonElement>(`.basket__item-delete`, container);
+        
         if (actions?.onClick) {
-            if (this._button) {
-                this._button.addEventListener('click', actions.onClick);
-            } else {
-                container.addEventListener('click', actions.onClick);
-            }
-        }
-    }       
+			if (this._deleteButton) {
+				this._deleteButton.addEventListener('click', actions.onClick);
+			} else {
+				container.addEventListener('click', actions.onClick);
+			}
+		}
+	}
+
+	set index(value: number) {
+		this.setText(this._index, value);
+	}
 }
-
-
-

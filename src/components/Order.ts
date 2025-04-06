@@ -1,9 +1,9 @@
 import {Form} from "./common/Form";
-import {IOrder} from "../types";
+import {IOrderForm} from "../types";
 import {IEvents} from "./base/EventEmitter";
 import {ensureAllElements} from "../utils/utils";
 
-export class Order extends Form<IOrder> {  
+export class Order extends Form<IOrderForm> {  
     protected _buttonsAlt: HTMLButtonElement[];  
 
      constructor(container: HTMLFormElement, events: IEvents) {
@@ -18,7 +18,7 @@ export class Order extends Form<IOrder> {
         })
     }
    
-    set paymentMethod( value: string) {
+    set payment( value: string) {
         this._buttonsAlt.forEach(button => {
             this.toggleClass(button, 'button_alt-active', button.name === value);
         });

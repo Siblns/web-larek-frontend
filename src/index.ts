@@ -2,15 +2,15 @@ import './scss/styles.scss';
 import {ProductAPI} from "./components/ProductAPI";
 import {API_URL, CDN_URL} from "./utils/constants";
 import {EventEmitter} from "./components/base/EventEmitter";
-import {cloneTemplate, createElement, ensureElement} from "./utils/utils";
+import {cloneTemplate, ensureElement} from "./utils/utils";
 import {AppState, CatalogChangeEvent, ProductItem} from "./components/AppData";
 import {Page} from "./components/Page";
 import {Modal} from "./components/common/Modal";
-import {CatalogItem} from "./components/Card";
+import {Card, cardBasket} from "./components/Card";
 import {Order} from "./components/Order";
 import {Contact} from "./components/Contact";
 import {Basket} from "./components/common/Basket";
-import {IOrderForm, IContact} from "./types";
+import {IOrderFull} from "./types";
 import {Success} from "./components/common/Success";
 
 const events =  new EventEmitter();
@@ -21,7 +21,6 @@ const modal = new Modal(ensureElement<HTMLElement>('#modal-container'), events);
 // Модель данных приложения
 const appData = new AppState({}, events);
 
-console.log( page);
 // Чтобы мониторить все события, для отладки
 events.onAll(({ eventName, data }) => {
   console.log(eventName, data);
@@ -40,40 +39,52 @@ const basket = new Basket(cloneTemplate(basketTemplate), events);
 const order = new Order(cloneTemplate(orderTemplate), events);
 const contact = new Contact(cloneTemplate(contactTemplate), events);
 
-// Изменились элементы каталога
+
 events.on<CatalogChangeEvent>('items:changed', () => {
   page.catalog = appData.catalog.map(item => {
-      const card = new CatalogItem('card'
-        ,cloneTemplate(cardCatalogTemplate)
-        , {
+      const card = new Card(cloneTemplate(cardCatalogTemplate), {
           onClick: () => events.emit('items:changed', item)
       });
       return card.render({
+          id: item.id,
+          category: item.category,
           title: item.title,
           image: item.image,
-          price: item.price
+          price: item.price         
       });      
   });
-  
-  page.counter = appData.getProduct().length;
 });
 
-// Изменен открытый выбранный продукт
 events.on('items:changed', (item: ProductItem) => {
   const showItem = (item: ProductItem) => {
-   const card = new CatalogItem('card'
-     ,cloneTemplate(cardPreviewTemplate), {
-     onClick: () => events.emit('basket:changed', item)
-  });      
+    const card = new Card (cloneTemplate(cardPreviewTemplate), {
+      onClick: () => {
+        if(appData.isInBasket(item)) {
+          appData.removeBasket(item);
+          card.buttonText = 'В корзину'
+        }
+        else {
+          appData.addBasket(item);
+          card.buttonText = 'Удалить из корзины';
+        }               
+      }
+    });
+    
+    modal.render({
+        content: card.render({
+            id: item.id,
+            title: item.title,
+            image: item.image,
+            price: item.price                 
+        })
+    });
 
-   modal.render({
-       content: card.render({
-         title: item.title,
-         image: item.image,
-         price: item.price             
-       })
-
-   });
+    if(card.price === 'Бесценно'){
+      card.buttonText = 'Не продается';
+    }
+    else{
+      card.buttonText = appData.isInBasket(item) ? 'Удалить из корзины' : 'В корзину';
+    }
  };
 
   if (item) {
@@ -90,32 +101,29 @@ events.on('items:changed', (item: ProductItem) => {
   }
 });
 
-// Изменения в лоте, но лучше все пересчитать
-events.on('basket:changed', (item: ProductItem) => {   
-
-  modal.render({content: createElement<HTMLElement>('div', {}, [
-    basket.render()
-    ]
-  )
-  });
-  console.log(item)
-  let total = 0;
-  basket.selected = appData.order.items;
-  basket.total = total;
-  console.log(basket.selected)
-  console.log(basket.total)
-  
-})
-
-// Открыть корзину
 events.on('basket:open', () => {
-  modal.render({
-      content: createElement<HTMLElement>('div', {}, [
-        basket.render()
-        
-      ]
-      )
-  });
+	modal.render({
+		content: basket.render(),
+	});
+});
+
+events.on('basket:change', () => {
+	page.counter = appData.basket.items.length;
+	basket.items = appData.basket.items.map((id, index) => {
+		const item = appData.catalog.find((item) => item.id === id);
+		const card = new cardBasket (cloneTemplate(cardBasketTemplate), {
+			onClick: () => appData.removeBasket(item)
+		});
+
+    card.index = index + 1;
+		return card.render({
+      id: item.id,
+      title: item.title,
+      price: item.price
+    });
+	});
+
+	basket.price = appData.basket.total;
 });
 
 // Открыть форму заказа
@@ -127,10 +135,11 @@ events.on('order:open', () => {
        valid: false,
        errors: []
     })
-});
+  });
 });
 
-events.on('contact:open', () => {
+// перейти на форму контактов
+events.on('order:submit', () => {
   modal.render({
    content: contact.render({
       email: '',
@@ -138,57 +147,62 @@ events.on('contact:open', () => {
       valid: false,
       errors: []
     })
-});
+  });
 });
 
-// Изменилось одно из полей
-events.on('order-button_alt:activ', (data: {field: keyof Partial<IOrderForm>,  value: string }) => {
-  order.paymentMethod = data.value;
+// Изменился способ оплаты
+events.on('order-button_alt:activ', (
+  data: {
+      field: keyof Pick<IOrderFull, 'payment'>,
+      value: string }) => {
+  
+  order.payment = data.value;
   appData.setOrderField('payment', data.value);
 });
 
-// Изменилось одно из полей
-events.on(/^order\..*:change/, (data: { field: keyof IOrderForm, value: string }) => {
-  appData.setOrderField(data.field, data.value);
+// Изменилось одно из полей в заказе
+events.on(/^order\..*:change/, (
+    data: { field: keyof Pick<IOrderFull, 'address'>
+      , value: string }) => {
+      appData.setOrderField(
+          data.field
+        , data.value);
 });
 
-events.on(/^contact\..*:change/, (data: { field: keyof IContact, value: string }) => {
-  contact.email = data.value;
-  contact.phone = data.value;
-  console.log('reter')
-  console.log(data.field, data.value)
-  appData.setContactField(data.field, data.value);
-});
-
-// Изменилось состояние валидации формы
-events.on('formErrors:change', (errors: Partial<IOrderForm>) => {
-  const { payment, address } = errors;
-  order.valid = !payment && !address;
-  order.errors = Object.values({payment, address}).filter(i => !!i).join('; ');
+events.on(/^contacts\..*:change/, (
+  data: { field: keyof Pick<IOrderFull, 'phone' | 'email'>
+    , value: string }) => {
+    appData.setOrderField(
+        data.field
+      , data.value);
 });
 
 // Изменилось состояние валидации формы
-events.on('formContactErrors:change', (errors: Partial<IContact>) => {
-  const { email, phone } = errors;
-  order.valid = !email && !phone;
-  order.errors = Object.values({phone, email}).filter(i => !!i).join('; ');
+events.on('formErrors:change', (errors: Partial<IOrderFull>) => {
+  const { payment, address, email, phone } = errors;
+
+  order.valid = !(payment || address);
+	order.errors = [payment, address].filter(Boolean).join('; ');
+
+  contact.valid = !(email || phone);
+	contact.errors = [email, phone].filter(Boolean).join('; ');
 });
 
 // Отправлена форма заказа
-events.on('contact:submit', () => {
- // contacts.email = data.value;
-  //contacts.phone = data.value;
+events.on('contacts:submit', () => {
+  const apiSendOrder = {...appData.order, ...appData.basket}
 
-  api.orderProducts(appData.order)
+  api.orderProducts(apiSendOrder)
       .then((result) => {
           const success = new Success(cloneTemplate(successTemplate), {
               onClick: () => {
                   modal.close();
-                  appData.clearBasket();
+                  appData.clearBasket();                 
+                  appData.clearOrder();
                   events.emit('items:changed');
               }
           });
-
+          success.total = result.total;
           modal.render({
               content: success.render({})
           });
@@ -197,7 +211,6 @@ events.on('contact:submit', () => {
           console.error(err);
       });
 });
-
 
 // Блокируем прокрутку страницы если открыта модалка
 events.on('modal:open', () => {
@@ -214,4 +227,4 @@ api.getProductList()
     .then(appData.setCatalog.bind(appData))
     .catch(err => {
         console.error(err);
-    });
+  });
