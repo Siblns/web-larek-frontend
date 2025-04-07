@@ -40,7 +40,7 @@ const order = new Order(cloneTemplate(orderTemplate), events);
 const contact = new Contact(cloneTemplate(contactTemplate), events);
 
 
-events.on<CatalogChangeEvent>('items:changed', () => {
+events.on<CatalogChangeEvent>('catalog:changed', () => {
   page.catalog = appData.catalog.map(item => {
       const card = new Card(cloneTemplate(cardCatalogTemplate), {
           onClick: () => events.emit('items:changed', item)
@@ -50,7 +50,7 @@ events.on<CatalogChangeEvent>('items:changed', () => {
           category: item.category,
           title: item.title,
           image: item.image,
-          price: item.price         
+          price: item.price
       });      
   });
 });
@@ -73,6 +73,8 @@ events.on('items:changed', (item: ProductItem) => {
     modal.render({
         content: card.render({
             id: item.id,
+            category: item.category,
+			description: item.description,
             title: item.title,
             image: item.image,
             price: item.price                 
@@ -90,7 +92,6 @@ events.on('items:changed', (item: ProductItem) => {
   if (item) {
    api.getProductItem(item.id)
        .then((result) => {
-           item.description = result.description;
            showItem(item);
        })
        .catch((err) => {
@@ -197,8 +198,6 @@ events.on('contacts:submit', () => {
           const success = new Success(cloneTemplate(successTemplate), {
               onClick: () => {
                   modal.close();
-                  appData.clearBasket();                 
-                  appData.clearOrder();
                   events.emit('items:changed');
               }
           });
@@ -206,6 +205,10 @@ events.on('contacts:submit', () => {
           modal.render({
               content: success.render({})
           });
+      })
+      .then(()=> {
+        appData.clearBasket();       
+        appData.clearOrder();
       })
       .catch(err => {
           console.error(err);

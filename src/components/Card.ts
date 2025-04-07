@@ -46,6 +46,7 @@ export abstract class сardCompact extends Component<ICard> {
             }
         }
         else {
+            this.setText(this._price,`${value} синапсов`);
             this.setDisabled(this._button, false);
         }            
     }
@@ -55,6 +56,13 @@ export class Card extends сardCompact {
 	protected _category: HTMLElement;
 	protected _image: HTMLImageElement;
 	protected _description?: HTMLElement;
+    protected _colors = <Record<string, string>>{
+        "дополнительное": "additional",
+        "софт-скил": "soft",
+        "кнопка": "button",
+        "хард-скил": "hard",
+        "другое": "other",
+      }
 
 	constructor(container: HTMLElement, actions?: ICardActions) {
 		super(container);
@@ -62,6 +70,7 @@ export class Card extends сardCompact {
         this._image = ensureElement<HTMLImageElement>(`.card__image`, container);
         this._description = container.querySelector(`.card__text`);
         this._category = container.querySelector(`.card__category`);
+        
 
 		if (actions?.onClick) {
 			if (this._button) {
@@ -81,6 +90,7 @@ export class Card extends сardCompact {
 
     set category(value: string) {
         this.setText(this._category, value);
+        this._category.className = `card__category card__category_${this._colors[value]}`
     }
 
     get category(): string {
